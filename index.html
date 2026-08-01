@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>محول الفيديو إلى برومبت</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: #0f1115;
+    color: #eaeaea;
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    max-width: 720px;
+    margin: 40px auto;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  p.subtitle {
+    color: #9aa0a6;
+    margin-top: 0;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: #1a1d24;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #2a2e37;
+  }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: #22252d;
+    border: 1px solid #2a2e37;
+    border-radius: 10px;
+    color: #eaeaea;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .tab-btn.active {
+    background: #4f7cff;
+    border-color: #4f7cff;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  input[type="file"], input[type="url"], input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #2a2e37;
+    background: #0f1115;
+    color: #eaeaea;
+    margin-top: 8px;
+  }
+  label { font-size: 14px; color: #c2c6cc; }
+  .row { margin-bottom: 14px; }
+  button.submit {
+    width: 100%;
+    padding: 12px;
+    background: #4f7cff;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  #status { margin-top: 12px; font-size: 14px; color: #9aa0a6; }
+  #result-box {
+    white-space: pre-wrap;
+    background: #0f1115;
+    border: 1px solid #2a2e37;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 16px;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    direction: ltr;
+    text-align: left;
+    display: none;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  #copy-btn {
+    display: none;
+    margin-top: 10px;
+    padding: 8px 14px;
+    background: #22252d;
+    border: 1px solid #2a2e37;
+    border-radius: 8px;
+    color: #eaeaea;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎬 محول الفيديو إلى برومبت</h1>
+  <p class="subtitle">ارفع فيديو أو حط رابط، واحصل على برومبت تفصيلي (مشهد بمشهد) لإنتاج فيديو مشابه بالذكاء الاصطناعي.</p>
+
+  <div class="card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('upload')">📁 رفع فيديو</button>
+      <button class="tab-btn" onclick="switchTab('link')">🔗 رابط فيديو</button>
+    </div>
+
+    <div id="upload-tab" class="tab-content active">
+      <div class="row">
+        <label>اختر فيديو من جهازك</label>
+        <input type="file" id="video-file" accept="video/*">
+      </div>
+    </div>
+
+    <div id="link-tab" class="tab-content">
+      <div class="row">
+        <label>رابط الفيديو (يوتيوب، تيكتوك، رابط مباشر...)</label>
+        <input type="url" id="video-url" placeholder="https://...">
+      </div>
+    </div>
+
+    <div class="row">
+      <label>عدد المشاهد/الفريمات (2-12)</label>
+      <input type="number" id="frames-count" value="6" min="2" max="12">
+    </div>
+
+    <button class="submit" id="submit-btn" onclick="analyzeVideo()">حلل الفيديو وطلع البرومبت</button>
+    <div id="status"></div>
+    <div id="result-box"></div>
+    <button id="copy-btn" onclick="copyResult()">📋 نسخ البرومبت</button>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(tab + '-tab').classList.add('active');
+  event.target.classList.add('active');
+}
+
+async function analyzeVideo() {
+  const btn = document.getElementById('submit-btn');
+  const status = document.getElementById('status');
+  const resultBox = document.getElementById('result-box');
+  const copyBtn = document.getElementById('copy-btn');
+
+  const fileInput = document.getElementById('video-file');
+  const urlInput = document.getElementById('video-url');
+  const framesCount = document.getElementById('frames-count').value;
+
+  const formData = new FormData();
+  formData.append('frames', framesCount);
+
+  if (fileInput.files.length > 0) {
+    formData.append('video', fileInput.files[0]);
+  } else if (urlInput.value.trim()) {
+    formData.append('url', urlInput.value.trim());
+  } else {
+    status.textContent = '⚠️ لازم ترفع فيديو أو تحط رابط أول.';
+    return;
+  }
+
+  btn.disabled = true;
+  resultBox.style.display = 'none';
+  copyBtn.style.display = 'none';
+  status.textContent = '⏳ جاري تحليل الفيديو... (ممكن ياخذ دقيقة حسب طول الفيديو)';
+
+  try {
+    const res = await fetch('/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok) {
+      status.textContent = '❌ خطأ: ' + (data.error || 'حدث خطأ غير متوقع');
+      return;
+    }
+
+    status.textContent = `✅ تم تحليل ${data.frames_used} فريم بنجاح.`;
+    resultBox.textContent = data.result;
+    resultBox.style.display = 'block';
+    copyBtn.style.display = 'inline-block';
+  } catch (err) {
+    status.textContent = '❌ خطأ بالاتصال بالسيرفر: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function copyResult() {
+  const text = document.getElementById('result-box').textContent;
+  navigator.clipboard.writeText(text);
+  const btn = document.getElementById('copy-btn');
+  const original = btn.textContent;
+  btn.textContent = '✅ اتنسخ!';
+  setTimeout(() => { btn.textContent = original; }, 1500);
+}
+</script>
+</body>
+</html>
